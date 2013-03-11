@@ -10,7 +10,7 @@ public class PrinterBolt extends BaseBasicBolt {
 
     @Override
     public void execute(Tuple tuple, BasicOutputCollector collector) {
-        System.out.println(tuple);
+        //print out the tuple here
     }
 
     @Override
