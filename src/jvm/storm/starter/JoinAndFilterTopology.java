@@ -20,6 +20,7 @@ import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 import java.util.HashMap;
 import java.util.Map;
+import storm.starter.util.TupleHelpers;
 
 public class JoinAndFilterTopology {
 
@@ -33,19 +34,35 @@ public class JoinAndFilterTopology {
 
         @Override
         public void execute(Tuple tuple, BasicOutputCollector collector) {
-            int retweets = tuple.getInteger(1);
-            int likes = tuple.getInteger(2);
-            String geo_location = tuple.getString(3);
-            Integer count = counts.get(geo_location);
-            if(count==null) count = 0;
-            count += retweets + likes;
-            counts.put(geo_location, count);
-            collector.emit(new Values(geo_location, count));
+            if (TupleHelpers.isTickTuple(tuple)) {
+                for(Map.Entry<String, Integer> entry : counts.entrySet()) {
+                    String geo_location = entry.getKey();
+                    Integer count = entry.getValue();
+                    collector.emit(new Values(geo_location, count));
+                }
+            }
+            else {
+                int retweets = tuple.getInteger(1);
+                int likes = tuple.getInteger(2);
+                String geo_location = tuple.getString(3);
+                Integer count = counts.get(geo_location);
+                if(count==null) count = 0;
+                count += retweets + likes;
+                counts.put(geo_location, count);
+                //collector.emit(new Values(geo_location, count));
+            }
         }
 
         @Override
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
             declarer.declare(_outFields);
+        }
+
+        @Override
+        public Map<String, Object> getComponentConfiguration() {
+            Map<String, Object> conf = new HashMap<String, Object>();
+            conf.put(Config.TOPOLOGY_TICK_TUPLE_FREQ_SECS, 5);
+            return conf;
         }
     }
 
