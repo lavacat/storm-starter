@@ -14,7 +14,7 @@ import java.util.Random;
 
 public class JoinAndFilterTopology {
     public static void main(String[] args) {
-    	
+        
         FeederSpout facebookSpout = new FeederSpout(new Fields("id", "likes", "geo_location"));
         FeederSpout twitterSpout = new FeederSpout(new Fields("id", "retweets"));
         
@@ -30,6 +30,8 @@ public class JoinAndFilterTopology {
                 .fieldsGrouping("twitter", new Fields("id"));
         // Add a filter bolt to your topology to filter out any message that has retweets less than 4 or likes less than 8. 
         
+        builder.setBolt("filter", new FilterBolt(new Fields("id", "retweets", "likes", "geo_location"))).shuffleGrouping("join");
+
         // Add another bolt to keep count of total likes and retweets per message
         
         
@@ -37,7 +39,8 @@ public class JoinAndFilterTopology {
         // This assumes that the bolt that feeds into it was named "filter",
         // change as per your topology.
         
-        builder.setBolt("print", new PrinterBolt()).shuffleGrouping("join");
+    builder.setBolt("print", new PrinterBolt()).shuffleGrouping("filter");
+        // builder.setBolt("print", new PrinterBolt()).shuffleGrouping("join");
         
         
         
@@ -50,9 +53,10 @@ public class JoinAndFilterTopology {
         
         Random generator = new Random();
         
+        String geo_location = "";
         int region;
-        String geo_location = null;
-        for(int i=0; i<10000000; i++) {
+        // for(int i=0; i<10000000; i++) {
+    for(int i=0; i<20; i++) {
             twitterSpout.feed(new Values(i, generator.nextInt(10 * ((i%3)+1))));
             if(i % 3 == 0) {
                 geo_location = "Asia/Pacific";
@@ -61,7 +65,7 @@ public class JoinAndFilterTopology {
             }
             else
             {
-            	geo_location = "US";
+                geo_location = "US";
             }
             facebookSpout.feed(new Values(i, generator.nextInt(25 * ((i%3)+1)), geo_location));
         }
