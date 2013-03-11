@@ -37,7 +37,7 @@ public class JoinAndFilterTopology {
         // This assumes that the bolt that feeds into it was named "filter",
         // change as per your topology.
         
-        builder.setBolt("print", new PrinterBolt()).shuffleGrouping("filter");
+        builder.setBolt("print", new PrinterBolt()).shuffleGrouping("join");
         
         
         
@@ -51,6 +51,7 @@ public class JoinAndFilterTopology {
         Random generator = new Random();
         
         int region;
+        String geo_location = null;
         for(int i=0; i<10000000; i++) {
             twitterSpout.feed(new Values(i, generator.nextInt(10 * ((i%3)+1))));
             if(i % 3 == 0) {
