@@ -12,7 +12,43 @@ import storm.starter.bolt.*;
 
 import java.util.Random;
 
+import backtype.storm.topology.BasicOutputCollector;
+import backtype.storm.topology.OutputFieldsDeclarer;
+import backtype.storm.topology.base.BaseBasicBolt;
+import backtype.storm.tuple.Fields;
+import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
+import java.util.HashMap;
+import java.util.Map;
+
 public class JoinAndFilterTopology {
+
+    public static class GeoLocationCount extends BaseBasicBolt {
+        Map<String, Integer> counts = new HashMap<String, Integer>();
+        Fields _outFields;
+
+        public GeoLocationCount(Fields outFields) {
+            _outFields = outFields;
+        }
+
+        @Override
+        public void execute(Tuple tuple, BasicOutputCollector collector) {
+            int retweets = tuple.getInteger(1);
+            int likes = tuple.getInteger(2);
+            String geo_location = tuple.getString(3);
+            Integer count = counts.get(geo_location);
+            if(count==null) count = 0;
+            count += retweets + likes;
+            counts.put(geo_location, count);
+            collector.emit(new Values(geo_location, count));
+        }
+
+        @Override
+        public void declareOutputFields(OutputFieldsDeclarer declarer) {
+            declarer.declare(_outFields);
+        }
+    }
+
     public static void main(String[] args) {
         
         FeederSpout facebookSpout = new FeederSpout(new Fields("id", "likes", "geo_location"));
@@ -32,6 +68,7 @@ public class JoinAndFilterTopology {
         
         builder.setBolt("filter", new FilterBolt(new Fields("id", "retweets", "likes", "geo_location"))).shuffleGrouping("join");
 
+        builder.setBolt("count", new GeoLocationCount(new Fields("geo_location", "count"))).fieldsGrouping("filter", new Fields("geo_location"));
         // Add another bolt to keep count of total likes and retweets per message
         
         
@@ -39,7 +76,7 @@ public class JoinAndFilterTopology {
         // This assumes that the bolt that feeds into it was named "filter",
         // change as per your topology.
         
-    builder.setBolt("print", new PrinterBolt()).shuffleGrouping("filter");
+        builder.setBolt("print", new PrinterBolt()).shuffleGrouping("count");
         // builder.setBolt("print", new PrinterBolt()).shuffleGrouping("join");
         
         
@@ -56,7 +93,7 @@ public class JoinAndFilterTopology {
         String geo_location = "";
         int region;
         // for(int i=0; i<10000000; i++) {
-    for(int i=0; i<20; i++) {
+        for(int i=0; i<20; i++) {
             twitterSpout.feed(new Values(i, generator.nextInt(10 * ((i%3)+1))));
             if(i % 3 == 0) {
                 geo_location = "Asia/Pacific";
