@@ -21,19 +21,27 @@ public class JoinBolt extends BaseRichBolt {
     Fields _idFields;
     Fields _outFields;
     int _numSources;
+    int _timeout;
     TimeCacheMap<List<Object>, Map<GlobalStreamId, Tuple>> _pending;
     Map<String, GlobalStreamId> _fieldLocations;
     
     public JoinBolt(Fields outFields) {
         _outFields = outFields;
+        _timeout = 0;
+    }
+
+    public JoinBolt(Fields outFields, int timeout) {
+        _outFields = outFields;
+        _timeout = timeout;
     }
     
     @Override
     public void prepare(Map conf, TopologyContext context, OutputCollector collector) {
         _fieldLocations = new HashMap<String, GlobalStreamId>();
         _collector = collector;
-        int timeout = ((Number) conf.get(Config.TOPOLOGY_MESSAGE_TIMEOUT_SECS)).intValue();
-        _pending = new TimeCacheMap<List<Object>, Map<GlobalStreamId, Tuple>>(timeout, new ExpireCallback());
+        if(_timeout == 0)
+            _timeout = ((Number) conf.get(Config.TOPOLOGY_MESSAGE_TIMEOUT_SECS)).intValue();
+        _pending = new TimeCacheMap<List<Object>, Map<GlobalStreamId, Tuple>>(_timeout, new ExpireCallback());
         _numSources = context.getThisSources().size();
         Set<String> idFields = null;
         for(GlobalStreamId source: context.getThisSources().keySet()) {
