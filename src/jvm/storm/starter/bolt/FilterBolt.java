@@ -13,9 +13,13 @@ import backtype.storm.tuple.Values;
 public class FilterBolt extends BaseBasicBolt {
 
     Fields _outFields;
+    int _retweetMin;
+    int _likesMin;
 
-    public FilterBolt(Fields outFields) {
+    public FilterBolt(Fields outFields, int retweetMin, int likesMin) {
         _outFields = outFields;
+        _retweetMin = retweetMin;
+        _likesMin = likesMin;
     }
 
     @Override
@@ -27,7 +31,7 @@ public class FilterBolt extends BaseBasicBolt {
 	int likes = tuple.getInteger(2);
 	String geo_location = tuple.getString(3);
 
-	if (retweets >= 5 && likes >= 9)
+	if (retweets >= _retweetMin && likes >= _likesMin)
 		collector.emit(new Values(ID, retweets, likes, geo_location));
     }
 

@@ -16,7 +16,9 @@ import java.util.Random;
 public class JoinAndFilterTopology {
 
     public static void main(String[] args) {
-        
+        int retweetMin = 5;
+        int likesMin = 8;
+
         FeederSpout facebookSpout = new FeederSpout(new Fields("id", "likes", "geo_location"));
         FeederSpout twitterSpout = new FeederSpout(new Fields("id", "retweets"));
         
@@ -32,7 +34,7 @@ public class JoinAndFilterTopology {
                 .fieldsGrouping("twitter", new Fields("id"));
         // Add a filter bolt to your topology to filter out any message that has retweets less than 4 or likes less than 8. 
         
-        builder.setBolt("filter", new FilterBolt(new Fields("id", "retweets", "likes", "geo_location")), 8).shuffleGrouping("join");
+        builder.setBolt("filter", new FilterBolt(new Fields("id", "retweets", "likes", "geo_location"), retweetMin, likesMin), 8).shuffleGrouping("join");
 
         builder.setBolt("count", new GeoLocationCountBolt(new Fields("geo_location", "count"))).fieldsGrouping("filter", new Fields("geo_location"));
         // Add another bolt to keep count of total likes and retweets per message
@@ -43,7 +45,7 @@ public class JoinAndFilterTopology {
         // change as per your topology.
         
         builder.setBolt("print", new PrinterBolt("./output")).shuffleGrouping("count");
-        // builder.setBolt("print", new PrinterBolt()).shuffleGrouping("join");
+        // builder.setBolt("print", new PrinterBolt("./output")).shuffleGrouping("filter");
         
         
         
@@ -71,6 +73,9 @@ public class JoinAndFilterTopology {
                 geo_location = "US";
             }
             facebookSpout.feed(new Values(i, generator.nextInt(25 * ((i%3)+1)), geo_location));
+
+	    if (i % 5 == 0)
+		Utils.sleep(1);
         }
                 
         Utils.sleep(25000);
